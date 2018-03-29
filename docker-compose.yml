@@ -1,0 +1,19 @@
+version: '3.0'
+services:
+  database:
+    image: amsterdam/postgres
+    ports:
+      - "5511:5432"
+    environment:
+      POSTGRES_HOST: localhost
+      POSTGRES_PASSWORD: insecure
+      POSTGRES_DB: verkeersborden
+      POSTGRES_USER: verkeersborden
+  current_traffic_signs:
+    build: ./current_traffic_signs
+    links:
+      - database
+    environment:
+      OBJECTSTORE_PASSWORD:
+    command: >
+        bash -c "/app/download_files.sh && /app/convert2csv.sh"
