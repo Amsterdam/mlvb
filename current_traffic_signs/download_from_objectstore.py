@@ -58,7 +58,7 @@ def download_container(connection, container, prefix, output_folder):
     print("{}".format(connection.get_container(container['name'])[1]))
     for obj in connection.get_container(container['name'])[1]: # [0] is metdata container, [1] is array with objects
         print('{}'.format(obj))
-        if obj['content_type'] != 'application/directory' and obj['content_type']== 'application/msaccess':
+        if obj['content_type'] != 'application/directory':
             cwd = os.getcwd()
             target_dir = os.path.join(cwd, output_folder,
                                       container['name'],
