@@ -8,5 +8,7 @@ set -x
 python download_from_objectstore.py config.ini objectstore beheerassets ../data
 
 # Test module mdbtools
-python mdb_to_csv.py ../data/beheerassets/noord/vm_stadsdeel_noord.mdb ../data
+# python mdb_to_csv.py ../data/beheerassets/noord/vm_stadsdeel_noord.mdb ../data
 
+# Import files to Postgres
+python import_files_to_postgres.py
