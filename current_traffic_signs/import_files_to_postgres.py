@@ -1,10 +1,12 @@
 from datapunt_processing import logger
 from datapunt_processing.helpers.connections import psycopg_connection_string
+from datapunt_processing.helpers.files import create_dir_if_not_exists
 import subprocess
 import psycopg2
 from psycopg2 import sql
 import re
 import os
+import sys
 
 logging = logger()
 
@@ -37,21 +39,25 @@ def cleanup_table_create(schema):
     '''
     schema = "\n".join(schema).lower()
     schema = re.sub(r'varchar \(\d+\)', 'text', schema) # char var gives errors with long text fields
-    schema.replace('\r\n', ' ').replace('\n', ' ').replace('\r', '')  
+    #schema.replace(r'\r\n', r' ').replace(r'\n', r' ').replace(r'\r', r'').replace(r'\r\r', r'')
     schema = re.sub(r'postgres_unknown 0x10', 'text', schema)
     schema = re.sub(r'index "([A-Za-z0-9-_]+)"."([A-Za-z0-9-_]+)"', 'index "\g<1>_\g<2>"', schema)
     schema = re.sub(r'constraint "([A-Za-z0-9-_]+)"."([A-Za-z0-9-_]+)"', 'constraint "\g<1>_\g<2>"', schema)
     schema = re.sub(r'create table "([A-Za-z0-9-_]+)"."([A-Za-z0-9-_]+)"', 'drop table if exists "\g<1>"."\g<2>";\ncreate table "\g<1>"."\g<2>"', schema)
+    schema = re.sub(r'__-__-____', 'NULL', schema)
+    schema = re.sub(r'__-__-____', 'NULL', schema)
+    schema = re.sub(r'unique', '', schema)  # remove unique constriant, else errors when importing
     print(schema)
     return schema
 
 
 def run_command_sync(cmd, allow_fail=False):
     '''run a shell command and return the command line output'''
+    encoding = sys.stdout.encoding
     logging.info('Running %s', scrub(cmd))
     stdout = subprocess.Popen(
         cmd,
-        stdout=subprocess.PIPE).communicate()[0].decode('latin1').split('\n')
+        stdout=subprocess.PIPE).communicate()[0].replace(b'\r',b'').decode(encoding).splitlines()
     return stdout
 
 
@@ -87,7 +93,7 @@ def get_table_names(mdb_file):
     '''Get table names'''
     table_names = subprocess.Popen(
         ['mdb-tables', '-1', mdb_file],
-        stdout=subprocess.PIPE).communicate()[0].decode('latin1')
+        stdout=subprocess.PIPE).communicate()[0].decode('utf-8')
     tables = table_names.strip().split('\n')
     logging.info('Tables: {}'.format(tables))
     return tables
@@ -104,9 +110,13 @@ def run_insert(text, cursor, schema_name):
         # replace field name with lower
         text = re.sub(expression, lambda x: x.group(1).lower(), text)
         try:
+            #text = cursor.mogrify(text)
+            print(text)
+            #text = cursor.mogrify(text).replace(b'\r\n',b'')
+            #print(text)
             cursor.execute(text)
         except psycopg2.ProgrammingError as e:
-            logging.info('Uh oh! ' + str(e)) #  + text)
+            logging.info('Uh oh! ' + str(e))
         except psycopg2.IntegrityError as e:
             # thrown if there's a problem with duplicate primary keys or other
             # constraints
@@ -123,6 +133,9 @@ def dump_tables_to_db(cursor, mdb_file, table_names, schema_name):
     else:
         tables = table_names.split(',')
         print(tables)
+    sql_dir_name = 'sql_inserts'
+    create_dir_if_not_exists(sql_dir_name)
+
     for table in tables:
         if table != '':
             logging.info('Dumping ' + table + ' table...')
@@ -131,47 +144,20 @@ def dump_tables_to_db(cursor, mdb_file, table_names, schema_name):
                 '-I',
                 'postgres',
                 '-N'+schema_name,
-                '-q'+'\'', # set quoting to single quote with values
+                '-q'+'\'',  # set quoting to single quote with values
                 mdb_file,
                 table.lower()]
-            insert_statements = run_command_sync(command)
-            [run_insert(line,
-                        cursor,
-                        schema_name)
-             for line in insert_statements]
+            insert_sql_statements = run_command_sync(command)
+            file_name = os.path.join(sql_dir_name, schema_name+'_'+table+'.sql')
 
+            with open(file_name, 'w', newline="\n") as a:
+                a.writelines(insert_sql_statements)
 
-def create_geoms_repositioned(cursor, schema_name, table_name):
-    cursor.execute(
-        sql.SQL("""
-        ALTER TABLE {}.{}
-            ADD COLUMN xcoord_repositioned double precision,
-            ADD COLUMN ycoord_repositioned double precision;
-        ALTER TABLE {}.{} DROP COLUMN IF EXISTS geom;  
-        SELECT AddGeometryColumn ({},{},'geom',28992,'POINT',2);
-
-        UPDATE {}.{}
-            SET xcoord_repositioned = xcoord+123835.77100000000791624+2023648.989000000059605,
-            ycoord_repositioned = ycoord+489390.68800000002374873+1658091.672999999951571;
-        UPDATE {}.{}
-            SET geom =
-            CASE
-               WHEN
-                  xcoord_repositioned is not null
-               THEN
-                  ST_PointFromText('POINT('||xcoord_repositioned||' '||ycoord_repositioned||')',28992)
-               END""")
-    .format(sql.Identifier(schema_name),
-            sql.Identifier(table_name),
-            sql.Identifier(schema_name),
-            sql.Identifier(table_name),
-            sql.Literal(schema_name),
-            sql.Literal(table_name),
-            sql.Identifier(schema_name),
-            sql.Identifier(table_name),
-            sql.Identifier(schema_name),
-            sql.Identifier(table_name)),)
-    logging.info('added geometry column to {}'.format(table_name))
+            with open(file_name, 'r') as insert_statements:
+                [run_insert(line,
+                            cursor,
+                            schema_name)
+                 for line in insert_statements]
 
 
 def create_geoms(cursor, schema_name, table_name):
@@ -181,18 +167,18 @@ def create_geoms(cursor, schema_name, table_name):
     SELECT AddGeometryColumn ({},{},'geom',28992,'POINT',2);
     UPDATE {}.{}
     SET geom =
-    CASE
-       WHEN
-          xcoord is not null
-       THEN
-          ST_PointFromText('POINT('||xcoord||' '||ycoord||')',28992)
-       END""")
-    .format(sql.Identifier(schema_name),
-            sql.Identifier(table_name),
-            sql.Literal(schema_name),
-            sql.Literal(table_name),
-            sql.Identifier(schema_name),
-            sql.Identifier(table_name)),)
+       CASE
+          -- FIX Microstation offset
+          WHEN xcoord is not null and xcoord < 100000 THEN
+            ST_PointFromText('POINT('||xcoord+123835.77100000000791624+2023648.989000000059605||' '||ycoord+489390.68800000002374873+1658091.672999999951571||')',28992)
+          WHEN xcoord is not null and xcoord > 100000 THEN
+            ST_PointFromText('POINT('||xcoord||' '||ycoord||')',28992)
+       END""").format(sql.Identifier(schema_name),
+                      sql.Identifier(table_name),
+                      sql.Literal(schema_name),
+                      sql.Literal(table_name),
+                      sql.Identifier(schema_name),
+                      sql.Identifier(table_name)),)
     logging.info('added geometry column to {}'.format(table_name))
 
 
@@ -205,10 +191,7 @@ def import_mdb(cursor, schema_name, mdb_file):
         schema_name,
         mdb_file)
     dump_tables_to_db(cursor, mdb_file, None, schema_name)
-    if schema_name == 'nieuw-west':
-        create_geoms(cursor, schema_name, 'vm_gegevens')
-    if schema_name in ('noord','west'):
-        create_geoms_repositioned(cursor, schema_name, 'vm_gegevens')
+    create_geoms(cursor, schema_name, 'vm_gegevens')
 
 
 def create_final_table(cursor):
@@ -217,7 +200,7 @@ def create_final_table(cursor):
         SELECT
             'Noord' as stadsdeel, mslink, mapid, bslnummer, mtrnummer, mdlnr, reflectie, bevestiging, 
             afmeting, status, onderbordmdlnr, onderbordtekst, datum_plaats, 
-            datum_contr, xcoord_repositioned, ycoord_repositioned, datum_vervangen, straatnaam, straat_id, 
+            datum_contr, xcoord, ycoord, datum_vervangen, straatnaam, straat_id, 
             wegvaknummer, rayon, opmerking, datum_vernieuw, x_brd, y_brd, 
             geom
         INTO current_traffic_signs
@@ -226,7 +209,7 @@ def create_final_table(cursor):
         SELECT
             'West', mslink, mapid, bslnummer, mtrnummer, mdlnr, reflectie, bevestiging, 
             afmeting, status, onderbordmdlnr, onderbordtekst, datum_plaats, 
-            datum_contr, xcoord_repositioned, ycoord_repositioned, datum_vervangen, straatnaam, straat_id, 
+            datum_contr, xcoord, ycoord, datum_vervangen, straatnaam, straat_id, 
             wegvaknummer, rayon, opmerking, datum_vernieuw, x_brd, y_brd, 
             geom
         FROM west.vm_gegevens
@@ -246,13 +229,13 @@ def create_final_table(cursor):
 def main():
     data_folder = '../data/'
     mdb_files = [
-    {'schema': 'nieuw-west',
-     'path': 'beheerassets/nieuw-west/verkeersborden_en_maatregelen_nieuwwest_1jul2014.mdb'},
-    {'schema': 'noord',
-     'path': 'beheerassets/noord/vm_stadsdeel_noord.mdb'},
-    {'schema': 'west',
-     'path': 'beheerassets/west/vm_sd_west2015.mdb'}
-    ]
+        {'schema': 'nieuw-west',
+         'path': 'beheerassets/nieuw-west/verkeersborden_en_maatregelen_nieuwwest_1jul2014.mdb'},
+        {'schema': 'noord',
+         'path': 'beheerassets/noord/vm_stadsdeel_noord.mdb'},
+        {'schema': 'west',
+         'path': 'beheerassets/west/vm_sd_west2015.mdb'}
+        ]
 
     cursor = pg_connection()
     for mdb_file in mdb_files:
