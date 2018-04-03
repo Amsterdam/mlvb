@@ -1,6 +1,8 @@
 from datapunt_processing import logger
 from datapunt_processing.helpers.connections import psycopg_connection_string
 from datapunt_processing.helpers.files import create_dir_if_not_exists
+from datapunt_processing.helpers.connections import postgres_engine_pandas
+
 import subprocess
 import psycopg2
 from psycopg2 import sql
@@ -8,8 +10,9 @@ import re
 import os
 import sys
 import glob
+import pandas as pd
 
-logging = logger()
+logger = logger()
 
 
 class NonZeroReturnCode(Exception):
@@ -32,7 +35,6 @@ def cleanup_table_create(schema):
     '''
     schema = "\n".join(schema).lower()
     schema = re.sub(r'varchar \(\d+\)', 'text', schema) # char var gives errors with long text fields
-    #schema.replace(r'\r\n', r' ').replace(r'\n', r' ').replace(r'\r', r'').replace(r'\r\r', r'')
     schema = re.sub(r'postgres_unknown 0x10', 'text', schema)
     schema = re.sub(r'index "([A-Za-z0-9-_]+)"."([A-Za-z0-9-_~]+)"', 'index "\g<1>_\g<2>"', schema)
     schema = re.sub(r'constraint "([A-Za-z0-9-_]+)"."([A-Za-z0-9-_]+)"', 'constraint "\g<1>_\g<2>"', schema)
@@ -44,10 +46,8 @@ def cleanup_table_create(schema):
 
 def run_command_sync(cmd, allow_fail=False):
     '''run a shell command and return the command line output'''
-    #os.environ['PGCLIENTENCODING']='UTF-8'
-    #os.environ['PGCLIENTENCODING']='LATIN-1'
     encoding = sys.stdout.encoding
-    logging.info('Running %s', scrub(cmd))
+    logger.info('Running %s', scrub(cmd))
     stdout = subprocess.Popen(
         cmd,
         stdout=subprocess.PIPE).communicate()[0].replace(b'\r',b'').decode(encoding).splitlines()
@@ -58,7 +58,7 @@ def create_pg_schema(cursor, schema_name):
     cursor.execute(
         sql.SQL("DROP SCHEMA IF EXISTS {} CASCADE;\nCREATE SCHEMA IF NOT EXISTS {}")
         .format(sql.Identifier(schema_name),sql.Identifier(schema_name)),)
-    logging.info('Created schema {}'.format(schema_name))
+    logger.info('Created schema {}'.format(schema_name))
 
 
 def pg_connection():
@@ -79,7 +79,7 @@ def create_pg_tables(cursor, schema_name, mdb_file):
     schema = cleanup_table_create(get_tables_from_mdb)
     cursor.execute(schema)
     print(schema)
-    logging.info('Created tables')
+    logger.info('Created tables')
 
 
 def get_table_names(mdb_file):
@@ -88,7 +88,7 @@ def get_table_names(mdb_file):
         ['mdb-tables', '-1', mdb_file],
         stdout=subprocess.PIPE).communicate()[0].decode('utf-8')
     tables = table_names.strip().split('\n')
-    logging.info('Tables: {}'.format(tables))
+    logger.info('Tables: {}'.format(tables))
     return tables
 
 
@@ -97,22 +97,21 @@ def run_insert(text, cursor, schema_name):
            Preparation is for case correction
         '''
         # regex for converting table and field names to lowercase
-        expression = re.compile(r'INSERT INTO "{}"."([a-z_]+)" \((.*)\) VALUES'.format(schema_name))
-        # replace table name with lower
+        expression = re.compile(r'\(([A-Za-z0-9_\-\s\,\"]+)\) VALUES')
+        # replace field name with lowercase
         text = re.sub(expression, lambda x: x.group(0).lower(), text)
-        text = re.sub(r'__-__-____', 'NULL', text)
-        text = re.sub(r'__-__-____', 'NULL', text)
-        # replace field name with lower
-        # text = re.sub(expression, lambda x: x.group(1).lower(), text)
+        # replace empty date fields with NULL
+        text = re.sub(r"'__-__-____'", r'NULL', text)
+        text = re.sub(r"'__-__-____'", r'NULL', text)
         try:
             #text = cursor.mogrify(text)
             #text = cursor.mogrify(text).replace(b'\r\n',b'')
             #print(text)
             cursor.execute(text)
         except psycopg2.ProgrammingError as e:
-            logging.info('Error ' + str(e))
+            logger.info('Error ' + str(e))
         except psycopg2.IntegrityError as e:
-            logging.info('Problem with duplicate primary keys or constraints: ' + str(e))
+            logger.info('Problem with duplicate primary keys or constraints: ' + str(e))
 
 
 def dump_tables_to_db(cursor, mdb_file, table_names, schema_name):
@@ -130,7 +129,7 @@ def dump_tables_to_db(cursor, mdb_file, table_names, schema_name):
 
     for table in tables:
         if table != '':
-            logging.info('Dumping ' + table + ' table...')
+            logger.info('Dumping ' + table + ' table...')
             command = [
                 'mdb-export',
                 '-I',
@@ -152,26 +151,26 @@ def dump_tables_to_db(cursor, mdb_file, table_names, schema_name):
                  for line in insert_statements]
 
 
-def create_geoms(cursor, schema_name, table_name):
+def create_geoms(cursor, schema_name, table_name, x_name, y_name):
     cursor.execute(
         sql.SQL("""
-    ALTER TABLE {}.{} DROP COLUMN IF EXISTS geom;
-    SELECT AddGeometryColumn ({},{},'geom',28992,'POINT',2);
-    UPDATE {}.{}
+    ALTER TABLE {0}.{1} DROP COLUMN IF EXISTS geom;
+    SELECT AddGeometryColumn ({2},{3},'geom',28992,'POINT',2);
+    UPDATE {0}.{1}
     SET geom =
        CASE
           -- FIX Microstation offset. Used MSLINK 9688 Noord to match offset mldnr : E06 with dgn vs access db
-          WHEN xcoord is not null and xcoord < 100000 THEN
-            ST_PointFromText('POINT('||xcoord+123835.77100000000791624+2023648.989000000059605||' '||ycoord+489390.68800000002374873+1658091.672999999951571||')',28992)
-          WHEN xcoord is not null and xcoord > 100000 THEN
-            ST_PointFromText('POINT('||xcoord||' '||ycoord||')',28992)
+          WHEN {4} is not null and {4} < 100000 THEN
+            ST_PointFromText('POINT('||{4}+123835.77100000000791624+2023648.989000000059605||' '||{5}+489390.68800000002374873+1658091.672999999951571||')',28992)
+          WHEN {4} is not null and {4} > 100000 THEN
+            ST_PointFromText('POINT('||{4}||' '||{5}||')',28992)
        END""").format(sql.Identifier(schema_name),
                       sql.Identifier(table_name),
                       sql.Literal(schema_name),
                       sql.Literal(table_name),
-                      sql.Identifier(schema_name),
-                      sql.Identifier(table_name)),)
-    logging.info('added geometry column to {}'.format(table_name))
+                      sql.Identifier(x_name),
+                      sql.Identifier(y_name)),)
+    logger.info('added geometry column to {}'.format(table_name))
 
 
 def import_mdb(cursor, schema_name, mdb_file):
@@ -183,47 +182,62 @@ def import_mdb(cursor, schema_name, mdb_file):
         schema_name,
         mdb_file)
     dump_tables_to_db(cursor, mdb_file, None, schema_name)
-    create_geoms(cursor, schema_name, 'vm_gegevens')
+    create_geoms(cursor, schema_name, 'vm_gegevens', 'xcoord', 'ycoord')
 
 
 def create_final_table(cursor):
     cursor.execute(sql.SQL("""
         DROP TABLE IF EXISTS current_traffic_signs;
         SELECT
-            'Noord' as stadsdeel, mslink, mapid, bslnummer, mtrnummer, mdlnr, reflectie, bevestiging, 
+            'Noord' as stadsdeel, mslink, mapid, mdlnr, reflectie, bevestiging, 
             afmeting, status, onderbordmdlnr, onderbordtekst, datum_plaats, 
-            datum_contr, xcoord, ycoord, datum_vervangen, straatnaam, straat_id, 
-            wegvaknummer, rayon, opmerking, datum_vernieuw, x_brd, y_brd, 
+            datum_contr, datum_vervangen, straatnaam, straat_id, 
+            wegvaknummer, rayon, opmerking, datum_vernieuw, xcoord, ycoord, 
             geom
         INTO current_traffic_signs
         FROM noord.vm_gegevens
         UNION ALL
         SELECT
-            'West', mslink, mapid, bslnummer, mtrnummer, mdlnr, reflectie, bevestiging, 
-            afmeting, status, onderbordmdlnr, onderbordtekst, datum_plaats, 
-            datum_contr, xcoord, ycoord, datum_vervangen, straatnaam, straat_id, 
-            wegvaknummer, rayon, opmerking, datum_vernieuw, x_brd, y_brd, 
+            'West', mslink, mapid, mdlnr, reflectie, bevestiging,
+            afmeting, status, onderbordmdlnr, onderbordtekst, datum_plaats,
+            datum_contr, datum_vervangen, straatnaam, straat_id,
+            wegvaknummer, rayon, opmerking, datum_vernieuw, xcoord, ycoord,
             geom
         FROM west.vm_gegevens
         UNION ALL
         SELECT
-            'Nieuw-West', mslink, mapid, bslnummer, mtrnummer, mdlnr, reflectie, bevestiging, 
+            'Nieuw-West', mslink, mapid, mdlnr, reflectie, bevestiging,
             afmeting, status, onderbordmdlnr, onderbordtekst, datum_plaats,
-            datum_contr, xcoord, ycoord, datum_vervangen, straatnaam, straat_id,
-            wegvaknummer, rayon, opmerking, datum_vernieuw, x_brd, y_brd,
+            datum_contr, datum_vervangen, straatnaam, straat_id,
+            wegvaknummer, rayon, opmerking, datum_vernieuw, xcoord, ycoord,
             geom
         FROM "nieuw-west".vm_gegevens
         UNION ALL
         SELECT
-            'Oost', mslink, mapid, bslnummer, mtrnummer, mdlnr, reflectie, bevestiging, 
+            'Oost', mslink, mapid, mdlnr, reflectie, bevestiging,
             afmeting, status, onderbordmdlnr, onderbordtekst, datum_plaats,
-            datum_contr, xcoord, ycoord, datum_vervangen, straatnaam, straat_id,
-            wegvaknummer, rayon, opmerking, datum_vernieuw, x_brd, y_brd,
+            datum_contr, datum_vervangen, straatnaam, straat_id,
+            wegvaknummer, rayon, opmerking, datum_vernieuw, xcoord, ycoord,
             geom
-        FROM "oost".vm_gegevens;
-        ALTER TABLE current_traffic_signs ADD COLUMN id SERIAL PRIMARY KEY;
-        """))
-    logging.info('Created table: current_traffic_signs')
+        FROM "oost".vm_gegevens
+        UNION ALL
+        SELECT
+            'Centrum', ogc_fid, elementid, ebtype, ebreflecti, ebbevestig,
+            ebgrootte, ebigebrekb, NULL, ebtekstopb, ebjaarplaa,
+            eiinspecti::text, NULL, elstraat, NULL,
+            NULL, elwijk, ebiopmerki, NULL, elxcoord, elycoord,
+            wkb_geometry
+        FROM centrum.amsterdam_vbpoint
+        UNION ALL
+        SELECT
+            'Zuidoost', index, uid_drager, "type bord", reflectieklasse, bevestigingstype,
+            grootte, status_i,onderbord,tekst_bord, productiejaar,
+            NULL, NULL, drager_straat, NULL,
+            NULL, NULL, opmerkingen, NULL,"x-coordinaat", "y-coordinaat",
+            geom
+        FROM zuidoost.verkeersborden_zo;
+        ALTER TABLE current_traffic_signs ADD COLUMN id SERIAL PRIMARY KEY;"""))
+    logger.info('Created table: current_traffic_signs')
 
 
 def import_shapefiles(data_folder, shp_dirs):
@@ -233,22 +247,45 @@ def import_shapefiles(data_folder, shp_dirs):
         create_pg_schema(cursor, shp_dir['schema'])
         full_path = os.path.join(data_folder, shp_dir['path'], "*.shp")
         for shp_filename in glob.glob(full_path):
-            logging.info('Found: '+shp_filename+', saving to Postgres')
+            logger.info('Found: '+shp_filename+', saving to Postgres')
             shp2psql(shp_filename, pg_string, shp_filename.split('/')[-1][:-4], shp_dir['schema'])
 
 
 def shp2psql(shp_filename, pg_string, layer_name, schema_name):
-    #cmd = ['export', 'PGCLIENTENCODING=LATIN1']
-    #run_command_sync(cmd)
-    #added_env = {**os.environ, 'PGCLIENTENCODING': 'LATIN1'}
     cmd = [
         'ogr2ogr', '-nln', schema_name+'.'+layer_name, '-lco','precision=NO', '-F', 'PostgreSQL',
         'PG:'+pg_string, shp_filename
     ]
-    #os.environ['PGCLIENTENCODING']='LATIN-1'
     stdout = subprocess.Popen(
         cmd,
-        stdout=subprocess.PIPE, env={**os.environ, 'PGCLIENTENCODING':'LATIN-1'})
+        stdout=subprocess.PIPE, env={**os.environ, 'PGCLIENTENCODING':'LATIN-1'})  # UTF-8 gives encoding error
+
+
+def load_xls(cursor, datadir, schema_name, config_path, db_config_name):
+    """Load xlsx into postgres for multiple files"""
+    files = os.listdir(datadir)
+    files_xls = [f for f in files if f.split('.')[-1] in ('xlsx', 'xls')]
+    logger.info(files_xls)
+
+    for filename in files_xls:
+        df = pd.read_excel(datadir + '/' + filename, skiprows=1)
+        if df.empty:
+            logger.info('No data')
+            continue
+        df.columns = map(str.lower, df.columns)
+        logger.info("added " + filename)
+        logger.info(df.columns)
+
+        # load the data into pg
+        engine = postgres_engine_pandas(config_path, db_config_name)
+        table_name = filename.split('.')[0]
+        create_pg_schema(cursor, schema_name)
+        df.to_sql(table_name, engine, schema=schema_name, if_exists='replace')  # ,dtype={geom: Geometry('POINT', srid='4326')})
+        logger.info(filename + ' added as ' + table_name)
+        create_geoms(cursor, schema_name, table_name,'x-coordinaat','y-coordinaat')
+        cursor.execute(sql.SQL("""ALTER TABLE {}.{} ADD COLUMN id SERIAL PRIMARY KEY;""")
+                       .format(sql.Identifier(schema_name),
+                               sql.Identifier(table_name)),)
 
 
 def main():
@@ -269,8 +306,14 @@ def main():
         {'schema': 'amsterdamse_bos',
          'path': 'beheerassets/adam_bos'}
         ]
+    xls_files = [
+        {'schema': 'zuidoost',
+         'path': 'beheerassets/zuidoost'}
+        ]
+
     import_shapefiles(data_folder, shp_files)
     cursor = pg_connection()
+    load_xls(cursor, os.path.join(data_folder, xls_files[0]['path']), xls_files[0]['schema'], 'config.ini', 'dev')
     for mdb_file in mdb_files:
         mdb_path = os.path.join(data_folder,mdb_file['path'])
         import_mdb(cursor, mdb_file['schema'], mdb_path)
