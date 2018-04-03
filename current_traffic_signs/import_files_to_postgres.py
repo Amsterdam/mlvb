@@ -7,16 +7,9 @@ from psycopg2 import sql
 import re
 import os
 import sys
+import glob
 
 logging = logger()
-
-
-def move_coordinates_microstation():
-    # Used MSLINK 9688 Noord to match offset mldnr : E06 with dgn vs access db
-    local_coord = [-2023648.989000000059605, -1658091.672999999951571]
-    global_coord = [123835.77100000000791624, 489390.68800000002374873]
-
-    transformation = [global_coord[0] - local_coord[0], global_coord[1] - local_coord[1]]
 
 
 class NonZeroReturnCode(Exception):
@@ -41,11 +34,9 @@ def cleanup_table_create(schema):
     schema = re.sub(r'varchar \(\d+\)', 'text', schema) # char var gives errors with long text fields
     #schema.replace(r'\r\n', r' ').replace(r'\n', r' ').replace(r'\r', r'').replace(r'\r\r', r'')
     schema = re.sub(r'postgres_unknown 0x10', 'text', schema)
-    schema = re.sub(r'index "([A-Za-z0-9-_]+)"."([A-Za-z0-9-_]+)"', 'index "\g<1>_\g<2>"', schema)
+    schema = re.sub(r'index "([A-Za-z0-9-_]+)"."([A-Za-z0-9-_~]+)"', 'index "\g<1>_\g<2>"', schema)
     schema = re.sub(r'constraint "([A-Za-z0-9-_]+)"."([A-Za-z0-9-_]+)"', 'constraint "\g<1>_\g<2>"', schema)
     schema = re.sub(r'create table "([A-Za-z0-9-_]+)"."([A-Za-z0-9-_]+)"', 'drop table if exists "\g<1>"."\g<2>";\ncreate table "\g<1>"."\g<2>"', schema)
-    schema = re.sub(r'__-__-____', 'NULL', schema)
-    schema = re.sub(r'__-__-____', 'NULL', schema)
     schema = re.sub(r'unique', '', schema)  # remove unique constriant, else errors when importing
     print(schema)
     return schema
@@ -53,6 +44,8 @@ def cleanup_table_create(schema):
 
 def run_command_sync(cmd, allow_fail=False):
     '''run a shell command and return the command line output'''
+    #os.environ['PGCLIENTENCODING']='UTF-8'
+    #os.environ['PGCLIENTENCODING']='LATIN-1'
     encoding = sys.stdout.encoding
     logging.info('Running %s', scrub(cmd))
     stdout = subprocess.Popen(
@@ -101,26 +94,25 @@ def get_table_names(mdb_file):
 
 def run_insert(text, cursor, schema_name):
         '''Prepare and run each insert statement
-        Preparation is for case correction
+           Preparation is for case correction
         '''
         # regex for converting table and field names to lowercase
         expression = re.compile(r'INSERT INTO "{}"."([a-z_]+)" \((.*)\) VALUES'.format(schema_name))
         # replace table name with lower
         text = re.sub(expression, lambda x: x.group(0).lower(), text)
+        text = re.sub(r'__-__-____', 'NULL', text)
+        text = re.sub(r'__-__-____', 'NULL', text)
         # replace field name with lower
-        text = re.sub(expression, lambda x: x.group(1).lower(), text)
+        # text = re.sub(expression, lambda x: x.group(1).lower(), text)
         try:
             #text = cursor.mogrify(text)
-            print(text)
             #text = cursor.mogrify(text).replace(b'\r\n',b'')
             #print(text)
             cursor.execute(text)
         except psycopg2.ProgrammingError as e:
-            logging.info('Uh oh! ' + str(e))
+            logging.info('Error ' + str(e))
         except psycopg2.IntegrityError as e:
-            # thrown if there's a problem with duplicate primary keys or other
-            # constraints
-            logging.info('Uh oh! ' + str(e))
+            logging.info('Problem with duplicate primary keys or constraints: ' + str(e))
 
 
 def dump_tables_to_db(cursor, mdb_file, table_names, schema_name):
@@ -168,7 +160,7 @@ def create_geoms(cursor, schema_name, table_name):
     UPDATE {}.{}
     SET geom =
        CASE
-          -- FIX Microstation offset
+          -- FIX Microstation offset. Used MSLINK 9688 Noord to match offset mldnr : E06 with dgn vs access db
           WHEN xcoord is not null and xcoord < 100000 THEN
             ST_PointFromText('POINT('||xcoord+123835.77100000000791624+2023648.989000000059605||' '||ycoord+489390.68800000002374873+1658091.672999999951571||')',28992)
           WHEN xcoord is not null and xcoord > 100000 THEN
@@ -220,10 +212,43 @@ def create_final_table(cursor):
             datum_contr, xcoord, ycoord, datum_vervangen, straatnaam, straat_id,
             wegvaknummer, rayon, opmerking, datum_vernieuw, x_brd, y_brd,
             geom
-        FROM "nieuw-west".vm_gegevens;
+        FROM "nieuw-west".vm_gegevens
+        UNION ALL
+        SELECT
+            'Oost', mslink, mapid, bslnummer, mtrnummer, mdlnr, reflectie, bevestiging, 
+            afmeting, status, onderbordmdlnr, onderbordtekst, datum_plaats,
+            datum_contr, xcoord, ycoord, datum_vervangen, straatnaam, straat_id,
+            wegvaknummer, rayon, opmerking, datum_vernieuw, x_brd, y_brd,
+            geom
+        FROM "oost".vm_gegevens;
         ALTER TABLE current_traffic_signs ADD COLUMN id SERIAL PRIMARY KEY;
         """))
     logging.info('Created table: current_traffic_signs')
+
+
+def import_shapefiles(data_folder, shp_dirs):
+    pg_string = psycopg_connection_string('config.ini', 'dev')
+    cursor = pg_connection()
+    for shp_dir in shp_dirs:
+        create_pg_schema(cursor, shp_dir['schema'])
+        full_path = os.path.join(data_folder, shp_dir['path'], "*.shp")
+        for shp_filename in glob.glob(full_path):
+            logging.info('Found: '+shp_filename+', saving to Postgres')
+            shp2psql(shp_filename, pg_string, shp_filename.split('/')[-1][:-4], shp_dir['schema'])
+
+
+def shp2psql(shp_filename, pg_string, layer_name, schema_name):
+    #cmd = ['export', 'PGCLIENTENCODING=LATIN1']
+    #run_command_sync(cmd)
+    #added_env = {**os.environ, 'PGCLIENTENCODING': 'LATIN1'}
+    cmd = [
+        'ogr2ogr', '-nln', schema_name+'.'+layer_name, '-lco','precision=NO', '-F', 'PostgreSQL',
+        'PG:'+pg_string, shp_filename
+    ]
+    #os.environ['PGCLIENTENCODING']='LATIN-1'
+    stdout = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE, env={**os.environ, 'PGCLIENTENCODING':'LATIN-1'})
 
 
 def main():
@@ -234,9 +259,17 @@ def main():
         {'schema': 'noord',
          'path': 'beheerassets/noord/vm_stadsdeel_noord.mdb'},
         {'schema': 'west',
-         'path': 'beheerassets/west/vm_sd_west2015.mdb'}
+         'path': 'beheerassets/west/vm_sd_west2015.mdb'},
+        {'schema': 'oost',
+         'path': 'beheerassets/oost/vm_stadsdeel_oost.mdb'}
         ]
-
+    shp_files = [
+        {'schema': 'centrum',
+         'path': 'beheerassets/centrum'},
+        {'schema': 'amsterdamse_bos',
+         'path': 'beheerassets/adam_bos'}
+        ]
+    import_shapefiles(data_folder, shp_files)
     cursor = pg_connection()
     for mdb_file in mdb_files:
         mdb_path = os.path.join(data_folder,mdb_file['path'])
