@@ -10,10 +10,10 @@ services:
       POSTGRES_DB: verkeersborden
       POSTGRES_USER: verkeersborden
   current_traffic_signs:
-    build: ./current_traffic_signs
+    build: .
     links:
       - database
     environment:
       OBJECTSTORE_PASSWORD:
     command: >
-        bash -c "/app/download_files.sh && /app/convert2csv.sh"
+        bash -c "/app/download_files.sh && /app/import_files_to_postgres.sh"

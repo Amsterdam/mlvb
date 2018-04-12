@@ -189,7 +189,7 @@ def create_final_table(cursor):
     cursor.execute(sql.SQL("""
         DROP TABLE IF EXISTS current_traffic_signs;
         SELECT
-            'Noord' as stadsdeel, mslink, mapid, mdlnr, reflectie, bevestiging, 
+            'Noord' as stadsdeel, LEFT(mdlnr,3) as bord_code, mslink, mapid, mdlnr, reflectie, bevestiging, 
             afmeting, status, onderbordmdlnr, onderbordtekst, datum_plaats, 
             datum_contr, datum_vervangen, straatnaam, straat_id, 
             wegvaknummer, rayon, opmerking, datum_vernieuw, xcoord, ycoord, 
@@ -198,7 +198,7 @@ def create_final_table(cursor):
         FROM noord.vm_gegevens
         UNION ALL
         SELECT
-            'West', mslink, mapid, mdlnr, reflectie, bevestiging,
+            'West', LEFT(mdlnr,3), mslink, mapid, mdlnr, reflectie, bevestiging,
             afmeting, status, onderbordmdlnr, onderbordtekst, datum_plaats,
             datum_contr, datum_vervangen, straatnaam, straat_id,
             wegvaknummer, rayon, opmerking, datum_vernieuw, xcoord, ycoord,
@@ -206,7 +206,7 @@ def create_final_table(cursor):
         FROM west.vm_gegevens
         UNION ALL
         SELECT
-            'Nieuw-West', mslink, mapid, mdlnr, reflectie, bevestiging,
+            'Nieuw-West', LEFT(mdlnr,3), mslink, mapid, mdlnr, reflectie, bevestiging,
             afmeting, status, onderbordmdlnr, onderbordtekst, datum_plaats,
             datum_contr, datum_vervangen, straatnaam, straat_id,
             wegvaknummer, rayon, opmerking, datum_vernieuw, xcoord, ycoord,
@@ -214,7 +214,15 @@ def create_final_table(cursor):
         FROM "nieuw-west".vm_gegevens
         UNION ALL
         SELECT
-            'Oost', mslink, mapid, mdlnr, reflectie, bevestiging,
+            'Zuid', LEFT(mdlnr,3), mslink, mapid, mdlnr, reflectie, bevestiging,
+            afmeting, status, onderbordmdlnr, onderbordtekst, datum_plaats,
+            datum_contr,datum_vervangen, straatnaam, straat_id,
+            wegvaknummer, rayon, opmerking, datum_vernieuw, xcoord, ycoord, 
+            geom
+        FROM "zuid".vm_gegevens
+        UNION ALL
+        SELECT
+            'Oost', LEFT(mdlnr,3), mslink, mapid, mdlnr, reflectie, bevestiging,
             afmeting, status, onderbordmdlnr, onderbordtekst, datum_plaats,
             datum_contr, datum_vervangen, straatnaam, straat_id,
             wegvaknummer, rayon, opmerking, datum_vernieuw, xcoord, ycoord,
@@ -222,7 +230,7 @@ def create_final_table(cursor):
         FROM "oost".vm_gegevens
         UNION ALL
         SELECT
-            'Centrum', ogc_fid, elementid, ebtype, ebreflecti, ebbevestig,
+            'Centrum', LEFT(ebtype,3), ogc_fid, elementid, ebtype, ebreflecti, ebbevestig,
             ebgrootte, ebigebrekb, NULL, ebtekstopb, ebjaarplaa,
             eiinspecti::text, NULL, elstraat, NULL,
             NULL, elwijk, ebiopmerki, NULL, elxcoord, elycoord,
@@ -230,7 +238,7 @@ def create_final_table(cursor):
         FROM centrum.amsterdam_vbpoint
         UNION ALL
         SELECT
-            'Zuidoost', index, uid_drager, "type bord", reflectieklasse, bevestigingstype,
+            'Zuidoost', LEFT("type bord",3), index, uid_drager, "type bord", reflectieklasse, bevestigingstype,
             grootte, status_i,onderbord,tekst_bord, productiejaar,
             NULL, NULL, drager_straat, NULL,
             NULL, NULL, opmerkingen, NULL,"x-coordinaat", "y-coordinaat",
@@ -288,6 +296,21 @@ def load_xls(cursor, datadir, schema_name, config_path, db_config_name):
                                sql.Identifier(table_name)),)
 
 
+def save_geojson(table_name, output_folder):
+    pg_string = psycopg_connection_string('config.ini', 'dev')
+    cursor = pg_connection()
+    create_dir_if_not_exists(output_folder)
+    full_path = os.path.join(output_folder,table_name+'.geojson')
+    cmd = [
+        'ogr2ogr', '-F', 'GeoJSON', full_path,
+        'PG:'+pg_string, table_name
+    ]
+    stdout = subprocess.Popen(
+        cmd,
+        stdout=subprocess.PIPE)
+    logger.info("Writen GeoJSON to: {}".format(full_path))
+
+
 def main():
     data_folder = '../data/'
     mdb_files = [
@@ -298,7 +321,9 @@ def main():
         {'schema': 'west',
          'path': 'beheerassets/west/vm_sd_west2015.mdb'},
         {'schema': 'oost',
-         'path': 'beheerassets/oost/vm_stadsdeel_oost.mdb'}
+         'path': 'beheerassets/oost/vm_stadsdeel_oost.mdb'},
+        {'schema': 'zuid',
+         'path': 'beheerassets/zuid/vm_zuid_verouderde_gegevens.mdb'},
         ]
     shp_files = [
         {'schema': 'centrum',
@@ -318,6 +343,7 @@ def main():
         mdb_path = os.path.join(data_folder,mdb_file['path'])
         import_mdb(cursor, mdb_file['schema'], mdb_path)
     create_final_table(cursor)
+    save_geojson('current_traffic_signs', '../output')
 
 
 if __name__ == "__main__":
