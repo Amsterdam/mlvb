@@ -1,1 +1,4 @@
-datapunt-processing==0.0.1a5
+datapunt-processing==0.0.1a7
+requests==2.18.4
+requests-cache==0.4.13
+xlrd==1.1.0
