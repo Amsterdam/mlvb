@@ -109,7 +109,7 @@ def load_wfs_layer_into_postgres(pg_str, url_wfs, layer_name, srs, retry_count=3
             "SERVICE": "WFS",
             "VERSION": "2.0.0",
             "MAXFEATURES": 10000,
-            "INDEX": page * 10000
+            "STARTINDEX": page * 10000
             #"SRSNAME": "EPSG:{}".format(srs)
         }
         logger.info("Requesting data from {}, layer: {}, page: {} of {}".format(
