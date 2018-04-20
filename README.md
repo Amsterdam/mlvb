@@ -3,6 +3,13 @@
 This repository is used for project planning and issue tracking for the ML
 pilot project at Datalab Amsterdam.
 
+## frontend
+
+To start the frontend locally run:
+```
+	npm run dev
+```
+
 ## current_traffic_signs
 To download the current traffic signs data:
 
