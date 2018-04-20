@@ -26,12 +26,12 @@ export function amsMap (el) {
  */
 function tileLayer () {
   return L.tileLayer(
-    'https://t1.data.amsterdam.nl/topo_rd/{z}/{x}/{y}.png',
+    'https://{s}.data.amsterdam.nl/topo_rd_zw/{z}/{x}/{y}.png',
     {
       tms: true,
-      minZoom: 0,
-      maxZoom: 20,
-      opacity: 0.8
+      minZoom: 6,
+      maxZoom: 15,
+      subdomains: ['t1', 't2', 't3', 't4']
     }
   )
 }
