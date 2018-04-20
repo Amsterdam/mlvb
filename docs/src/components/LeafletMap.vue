@@ -23,6 +23,6 @@ export default {
 
 <style scoped>
 .map {
-  height: 300px
+  height: 600px
 }
 </style>
