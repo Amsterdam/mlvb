@@ -1,7 +1,7 @@
 <!--Example of a component with a link and how to watch for state changes-->
 <template>
   <div>
-    <card>    
+    <card>
       <leaflet-map></leaflet-map>
     </card>
   </div>
