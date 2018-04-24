@@ -1,9 +1,8 @@
 <!--Example of a component with a link and how to watch for state changes-->
 <template>
   <div>
-    <leaflet-map></leaflet-map>
-    <card>
-       <div v-for="feature in currentSigns.features" v-bind:key="feature.mslink">{{feature}}</div>
+    <card>    
+      <leaflet-map></leaflet-map>
     </card>
   </div>
 </template>
@@ -13,7 +12,6 @@ import { mapActions, mapGetters } from 'vuex'
 
 import card from './Layout/Card'
 import leafletMap from './leafletMap'
-import currentSigns from '.././data/current_traffic_signs_d02ro_bb22.json'
 
 export default {
   name: 'mlvb',
@@ -23,7 +21,6 @@ export default {
   },
   data () {
     return {
-      currentSigns: currentSigns
     }
   },
   computed: {
