@@ -13,7 +13,7 @@ export function amsMap (el) {
     attributionControl: false,
     zoomControl: true,
     scrollWheelZoom: false
-  }).setView([52.35, 4.9], 6)
+  }).setView([52.355, 4.92], 7)
 
   map.addLayer(tileLayer())
   return map
@@ -26,7 +26,7 @@ export function amsMap (el) {
  */
 function tileLayer () {
   return L.tileLayer(
-    'https://{s}.data.amsterdam.nl/topo_rd_zw/{z}/{x}/{y}.png',
+    'https://{s}.data.amsterdam.nl/topo_rd/{z}/{x}/{y}.png',
     {
       tms: true,
       minZoom: 6,
