@@ -1,11 +1,9 @@
 <template>
-  <div class="card mt-2">
-    <h3 class="card-header">
+  <div class="col-xs-6">
+    <h3 class="header">
       {{title}}
     </h3>
-    <div class="card-body">
-      <slot></slot>
-    </div>
+    <slot></slot>
   </div>
 </template>
 

@@ -1,14 +1,17 @@
 <template>
   <div>
     <p>
-      I started out as a GeoJSON {{ type }}, but now I'm a Leaflet vector!
+      Coordinate: {{ coordinates }}
+      Mslink: {{ mslink }}
+      Bordcode: {{ bordnummer }}
+      Pano_url: {{ pano_url }}
+      <!--<img :src="pano_url" width='300px'>-->
     </p>
-    {{ text }}
   </div>
 </template>
 <script>
 export default {
   name: 'GeoJson2Popup',
-  props: ['type', 'text']
+  props: ['mslink', 'coordinates', 'bordnummer', 'pano_url']
 }
 </script>
