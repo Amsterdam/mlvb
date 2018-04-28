@@ -19,7 +19,7 @@ import { mapGetters, mapActions } from 'vuex'
 import L from 'leaflet'
 import store from '../store'
 // import PopupContent from './GeoJson2Popup'
-import data from '../data/nearest_panos_d02ro_bb22_gele_koker_2018-04-26.json'
+import data from '../data/nearest_panos_d02_gele_koker_2018-04-28.json'
 // import { rd, rdToWgs84 } from '../services/geojson'
 import { LMap, LTileLayer, LMarker, LGeoJson } from 'vue2-leaflet'
 
