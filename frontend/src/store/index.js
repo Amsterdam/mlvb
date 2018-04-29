@@ -8,7 +8,11 @@ export default new Vuex.Store({
     // Register all state data in the state object
     text: 'NoText',
     locationData: {
-      url: 'https://data.amsterdam.nl/panorama/2017/03/27/TMX7316010203-000224/pano_0000_001621/equirectangular/panorama_2000.jpg'
+      url: 'https://data.amsterdam.nl/panorama/2017/04/11/TMX7316010203-000255/pano_0000_001822/equirectangular/panorama_2000.jpg',
+      mdlnr: 'D02ro_BB22',
+      mslink: 48036,
+      pano_id: 719891,
+      stadsdeel: 'Zuid'
     },
     markerSelected: 1
   },

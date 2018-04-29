@@ -8,11 +8,13 @@
         </tr>
       </tbody>
     </table>
-    <img :src="locationData.url" width='100%'/>
+    <marzipano :pano_url="locationData.url"></marzipano>
+    <!-- <img :src="locationData.url" width='100%'/> -->
   </div>
 </template>
 <script>
 import { mapGetters } from 'vuex'
+import marziPano from './marziPano'
 
 export default {
   computed: {
@@ -20,10 +22,13 @@ export default {
       'locationData'
     ])
   },
+  components: {
+    'marzipano': marziPano
+  },
   watch: {
     'locationData' (to, from) {
       // Example of a state change watch
-      console.log('text has changed', from, to)
+      // console.log('locationData has changed', from, to)
     }
   }
 }

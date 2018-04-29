@@ -1,7 +1,8 @@
 <template>
     <l-map style="min-height: 600px" :zoom="zoom" :center="center" >
-      <l-tile-layer :url="url" :options="options"></l-tile-layer>
+      <l-tile-layer :url="topoUrl" :options="mapOptions"></l-tile-layer>
       <l-geo-json :geojson="currentTrafficSigns.geojson"  :options="currentTrafficSigns.options"></l-geo-json>
+      <v-geosearch :options="geosearchOptions" ></v-geosearch>
       <!--<l-marker v-for="item in currentTrafficSigns.geojson" :key="item.id" :lat-lng="item.geometry.coordinates"></l-marker>-->
     </l-map>
     <!--<div id='bla'>
@@ -15,13 +16,22 @@
 </template>
 <script>
 // import Vue from 'vue'
-import { mapGetters, mapActions } from 'vuex'
+import {
+  mapGetters,
+  mapActions
+} from 'vuex'
 import L from 'leaflet'
 import store from '../store'
 // import PopupContent from './GeoJson2Popup'
 import data from '../data/nearest_panos_d02_gele_koker_2018-04-28.json'
 // import { rd, rdToWgs84 } from '../services/geojson'
-import { LMap, LTileLayer, LMarker, LGeoJson } from 'vue2-leaflet'
+import {
+  LMap,
+  LTileLayer,
+  LGeoJson
+} from 'vue2-leaflet'
+import { OpenStreetMapProvider } from 'leaflet-geosearch'
+import VGeosearch from './Vue2LeafletGeosearch'
 
 var baseIcon = L.icon({
   iconUrl: 'static/images/marker.svg',
@@ -101,19 +111,25 @@ export default {
   components: {
     LMap,
     LTileLayer,
-    LMarker,
-    LGeoJson
+    LGeoJson,
+    VGeosearch
   },
   data () {
     return {
       zoom: 12,
       center: [52.353, 4.90],
       // crs: rd,
-      url: 'https://{s}.data.amsterdam.nl/topo_wm/{z}/{x}/{y}.png',
-      options: {
+      topoUrl: 'https://{s}.data.amsterdam.nl/topo_wm/{z}/{x}/{y}.png',
+      mapOptions: {
         minZoom: 6,
         maxZoom: 23,
         subdomains: ['t1', 't2', 't3', 't4']
+      },
+      geosearchOptions: {
+        provider: new OpenStreetMapProvider(),
+        showMarker: false,
+        style: 'bar',
+        autoClose: true
       },
       currentTrafficSigns: {
         geojson: data.features,
