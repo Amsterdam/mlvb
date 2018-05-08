@@ -4,11 +4,11 @@ set -u   # crash on missing env variables
 set -e   # stop on any error
 set -x
 
+# Set path to ogr2ogr on OSX
+export PATH=/Library/Frameworks/GDAL.framework/Programs:$PATH
+
 # Get data
 python download_from_objectstore.py config.ini objectstore beheerassets ../data
-
-# Test module mdbtools
-# python mdb_to_csv.py ../data/beheerassets/noord/vm_stadsdeel_noord.mdb ../data
 
 # Import files to Postgres
 python import_files_to_postgres.py
@@ -18,3 +18,10 @@ python load_wfs_to_postgres.py config.ini dev https://map.data.amsterdam.nl/maps
 
 # Create nearest pano table and export to csv
 python select_nearest_panos.py config.ini dev D02ro_BB22 Gele\ koker ../output
+python select_nearest_panos.py config.ini dev C02 Scharnierbeugel,Klemband,Overig ../output csv
+
+python select_nearest_panos.py config.ini dev E06 Scharnierbeugel,Klemband,Overig,Lichtmast,390\ flessenpaal,360\ flessenpaal,Flessenpaal\ 360,Flessenpaal\ 390,Buispaal ../output csv
+
+python select_nearest_panos.py config.ini dev C02 Scharnierbeugel,Klemband,Overig ../output json
+
+python select_nearest_panos.py config.ini dev E06 Scharnierbeugel,Klemband,Overig,Lichtmast,390\ flessenpaal,360\ flessenpaal,Flessenpaal\ 360,Flessenpaal\ 390,Buispaal ../output json
