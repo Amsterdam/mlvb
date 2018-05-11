@@ -9,5 +9,6 @@ Data set used in traning:
 Results (data files below) were obtained on a random sub-sample of panorama
 images from 2017.
 
-`locations-detected-2018-05-07.csv`: "midden
-`locations-detected-2018-05-11.csv`
+`locations-detected-2018-05-07.csv`: locations of "vluchtheuvelbaken" images
+`locations-detected-2018-05-11.csv`: locations of "vluchtheuvelbaken" images
+
