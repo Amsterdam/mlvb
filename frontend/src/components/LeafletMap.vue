@@ -1,7 +1,8 @@
 <template>
     <l-map style="min-height: 600px" :zoom="zoom" :center="center" >
       <l-tile-layer :url="topoUrl" :options="mapOptions"></l-tile-layer>
-      <l-geo-json :geojson="currentTrafficSigns.geojson"  :options="currentTrafficSigns.options"></l-geo-json>
+     <!-- <l-geo-json :geojson="currentSignsD02.geojson"  :options="currentSignsD02.options"></l-geo-json>-->
+      <l-geo-json :geojson="detectedSignsD02.geojson"  :options="detectedSignsD02.options"></l-geo-json>
       <v-geosearch :options="geosearchOptions" ></v-geosearch>
       <!--<l-marker v-for="item in currentTrafficSigns.geojson" :key="item.id" :lat-lng="item.geometry.coordinates"></l-marker>-->
     </l-map>
@@ -23,7 +24,8 @@ import {
 import L from 'leaflet'
 import store from '../store'
 // import PopupContent from './GeoJson2Popup'
-import data from '../data/nearest_panos_d02_gele_koker_2018-04-28.json'
+import currentSignsD02Json from '../data/nearest_panos_d02_gele_koker_2018-04-28.json'
+import detectedSignsD02Json from '../data/2018-05-07-detections-vluchtheuvel-bakens.json'
 // import { rd, rdToWgs84 } from '../services/geojson'
 import {
   LMap,
@@ -131,8 +133,18 @@ export default {
         style: 'bar',
         autoClose: true
       },
-      currentTrafficSigns: {
-        geojson: data.features,
+      currentSignsD02: {
+        geojson: currentSignsD02Json.features,
+        options: {
+          pointToLayer: function (feature, latlng) {
+            let marker = L.marker(latlng, {icon: baseIcon})
+            return marker
+          },
+          onEachFeature: onEachFeature
+        }
+      },
+      detectedSignsD02: {
+        geojson: detectedSignsD02Json.features,
         options: {
           pointToLayer: function (feature, latlng) {
             let marker = L.marker(latlng, {icon: baseIcon})
