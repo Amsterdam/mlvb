@@ -36,7 +36,8 @@ def read_csv(filename):
                 'geometry': {
                     'type': 'Point',
                     'coordinates': [lon, lat]
-                }
+                },
+                'type': 'Feature'
             })
 
     return {
