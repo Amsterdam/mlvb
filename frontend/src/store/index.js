@@ -14,7 +14,7 @@ export default new Vuex.Store({
       pano_id: 719891,
       stadsdeel: 'Zuid'
     },
-    markerSelected: 1
+    markerSelected: 0
   },
   actions: {
     // Actions are available to manipulate the state
@@ -31,8 +31,8 @@ export default new Vuex.Store({
     setLocationData (store, object) {
       store.commit('locationData', object)
     },
-    setMarkerSelected (store, bool) {
-      store.commit('markerSelected', bool)
+    setMarkerSelected (store, object) {
+      store.commit('markerSelected', object)
     }
   },
   mutations: {
@@ -44,8 +44,8 @@ export default new Vuex.Store({
     locationData (state, object) {
       state.locationData = object
     },
-    markerSelected (state, bool) {
-      state.markerSelected = bool
+    markerSelected (state, object) {
+      state.markerSelected = object
     }
   },
   getters: {

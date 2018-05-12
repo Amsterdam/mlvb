@@ -1,21 +1,23 @@
 <template>
-  <div class="col mt-1">
-    <h3>Panoramabeeld</h3>
     <table>
       <tbody>
+        <th colspan="2">
+          <h3>Panoramabeeld</h3>
+        </th>
         <tr v-for="(value, key) in locationData" :key="key">
           <th>{{key}}</th><td>{{value}}</td>
         </tr>
+        <tr>
+          <td colspan="2">
+            <marzipano :pano_url="locationData.url"></marzipano>
+          </td>
+        </tr>
       </tbody>
     </table>
-    <marzipano :pano_url="locationData.url"></marzipano>
-    <!-- <img :src="locationData.url" width='100%'/> -->
-  </div>
 </template>
 <script>
 import { mapGetters } from 'vuex'
 import marziPano from './marziPano'
-
 export default {
   computed: {
     ...mapGetters([
@@ -33,3 +35,19 @@ export default {
   }
 }
 </script>
+<style lang="scss" scoped>
+h3
+ {
+    font-family: 'Avenir Medium'; 
+    font-weight: bold;
+ }
+ th {
+  font-family: 'Avenir Medium'; 
+  padding-right: 20px;
+  padding-bottom: 5px;
+  vertical-align: top;
+ }
+ td {
+   padding-bottom: 10px;
+ }
+</style>

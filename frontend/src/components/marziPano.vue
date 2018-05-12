@@ -1,6 +1,6 @@
 <!--component that uses marziPano-->
 <template>
-  <div style="height: 500px"></div>
+  <div style="height: 400px; margin:0px;"></div>
 </template>
 
 <script>

@@ -6,4 +6,3 @@ docs:
 	$(RM) $(BUILDDIR)
 	CP -a dist/. $(BUILDDIR)
 	MV $(BUILDDIR)/mlvb/static $(BUILDDIR)/static
-	$RM $(BUILDDIR)/mlvb

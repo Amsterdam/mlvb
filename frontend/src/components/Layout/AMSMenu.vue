@@ -1,11 +1,9 @@
 <template>
   <div class="menu mt-3">
-
     <div class="container">
       <nav class="nav nav-pills justify-content-end">
         <router-link to="/" class="nav-link">
           <span class="linklabel">
-            Home
           </span>
         </router-link>
       </nav>
@@ -21,8 +19,11 @@ export default {
 
 <style lang="scss" scoped>
 @import "~stijl/dist/scss/ams-colorpalette";
-
+.nav {
+  background-color: #f5f3f3;
+}
 .menu {
-  background-color: $ams-lichtgrijs;
+  background-color: #f5f3f3;
+  height: 45px;
 }
 </style>
