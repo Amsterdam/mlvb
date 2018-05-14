@@ -38,11 +38,11 @@ export default {
 <style lang="scss" scoped>
 h3
  {
-    font-family: 'Avenir Medium'; 
+    font-family: 'Avenir Medium';
     font-weight: bold;
  }
  th {
-  font-family: 'Avenir Medium'; 
+  font-family: 'Avenir Medium';
   padding-right: 20px;
   padding-bottom: 5px;
   vertical-align: top;

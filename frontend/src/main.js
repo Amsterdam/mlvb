@@ -14,9 +14,12 @@ import App from './App'
 import router from './router'
 import store from './store'
 import { readData } from './services/datareader'
+import vSelect from 'vue-select'
 
 Vue.use(VueAxios, axios)
 Vue.config.productionTip = false
+
+Vue.component('v-select', vSelect)
 
 /* eslint-disable no-new */
 let vueApp = new Vue({

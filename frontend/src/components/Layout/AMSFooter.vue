@@ -41,12 +41,12 @@ div {font-family: 'Avenir Medium'; }
 .col.mt-1 {
   margin: 0px;
 }
-li { 
+li {
   list-style:none;
   padding:5px;
   bottom: 10px;
   right: 0px;
-  text-align: right; 
+  text-align: right;
 }
 ul {
   float: right;

@@ -1,19 +1,15 @@
 <template>
   <div class="menu mt-3">
-    <div class="container">
-      <nav class="nav nav-pills justify-content-end">
-        <router-link to="/" class="nav-link">
-          <span class="linklabel">
-          </span>
-        </router-link>
-      </nav>
+    <div class="d-flex justify-content-center">
+      <geo-search-bar class="geo-search"></geo-search-bar>
     </div>
   </div>
-
 </template>
 
 <script>
+import GeoSearchBar from '../GeoSearch'
 export default {
+  components: {GeoSearchBar}
 }
 </script>
 
@@ -25,5 +21,12 @@ export default {
 .menu {
   background-color: #f5f3f3;
   height: 45px;
+}
+.geo-search {
+  background-color: white;
+  width: 75%;
+  height: 35px;
+  margin: 5px;
+  margin-left: 60px;
 }
 </style>
