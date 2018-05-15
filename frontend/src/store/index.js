@@ -14,7 +14,7 @@ export default new Vuex.Store({
       pano_id: 719891,
       stadsdeel: 'Zuid'
     },
-    geosearchSelected: null
+    geosearchSelected: [[ 52.36152, 4.901259 ], [ 52.37182, 4.92294788 ]]
   },
   actions: {
     // Actions are available to manipulate the state

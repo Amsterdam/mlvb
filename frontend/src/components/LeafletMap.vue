@@ -10,10 +10,10 @@
     </ul>
   </div>
   <div>
-    <l-map style="min-height: 600px" :bounds= "geosearchSelected" :zoom="zoom" :center="center">
+    <l-map style="min-height: 600px" :bounds="geosearchSelected" :zoom="zoom" :center="center">
       <div class="leaflet-bottom leaflet-left">
         <div id="legend" class="map-overlay">
-          <div v-for="sign in signs" :key="sign.signId">
+          <div v-for="sign in signs" :key="sign.signId" v-if="sign.visible">
             <div v-for="signType in sign.data" :key="signType.id" class="mb-1">
               <button class="btn btn-sm btn-light">
                 <img class="icon" :src="signType.icon">
@@ -32,7 +32,7 @@
         <l-layer-group v-for="signType in sign.data" :key="signType.id">
           <l-marker v-for="item in signType.features"
             :key="item.id"
-            :icon="iconSet(signType.icon)"
+            :icon="iconSet(signType.icon, signType.iconSize)"
             :visible="sign.visible"
             :lat-lng="{
               lat:item.geometry.coordinates[1],
@@ -53,8 +53,10 @@ import {
 import L from 'leaflet'
 // import store from '../store'
 // import PopupContent from './GeoJson2Popup'
-import currentSignsD02Json from '../data/nearest_panos_d02_gele_koker_2018-04-28.json'
-import detectedSignsD02Json from '../data/2018-05-11-detections-vluchtheuvel-bakens-panos.json'
+import currentSignsD02Json from '../data/weesperbuurt_current_traffic_signs_d02.json'
+import detectedSignsD02Json from '../data/2018-05-15-detections-vluchtheuvel-bakens.json'
+import currentSignsD02JsonAmsterdam from '../data/nearest_panos_d02_gele_koker_2018-04-28.json'
+import firstrunD02Json from '../data/2018-05-11-detections-vluchtheuvel-bakens-panos.json'
 // import { rd, rdToWgs84 } from '../services/geojson'
 import {
   LMap,
@@ -86,10 +88,10 @@ export default {
     ...mapActions({
       setLocationData: 'setLocationData'
     }),
-    iconSet (iconUrl) {
+    iconSet (iconUrl, iconSize) {
       return L.icon(
         { iconUrl: iconUrl,
-          iconSize: [10, 10],
+          iconSize: iconSize,
           iconAnchor: [5, 5],
           popupAnchor: [0, -37]}
       )
@@ -99,7 +101,8 @@ export default {
     ...mapGetters([
       'locationData',
       'geosearchSelected',
-      'iconUrl'
+      'iconUrl',
+      'iconSize'
     ])
   },
   watch: {
@@ -140,7 +143,25 @@ export default {
       //  autoClose: true
       // },
       signs: [{
-        signId: 'D02',
+        signId: 'D02 eerste run',
+        signName: 'Vluchtheuvelbaken',
+        signDescription: 'Gebod voor alle bestuurders het bord voorbij te gaan aan de zijde die de pijl aangeeft',
+        signImage: 'http://wetten.overheid.nl/afbeelding?toestandid=BWBR0004825/2017-07-01_0&naam=27629.png',
+        visible: false,
+        data: [
+          { type: 'uit administratie',
+            id: 'currentD02',
+            features: currentSignsD02JsonAmsterdam.features,
+            icon: 'static/images/d02.svg',
+            iconSize: [10, 10]
+          },
+          { type: 'gedetecteerd',
+            id: 'detectedD02',
+            features: firstrunD02Json.features,
+            icon: 'static/images/d02_ml.svg',
+            iconSize: [7, 7]
+          }]}, {
+        signId: 'D02 Weesperbuurt',
         signName: 'Vluchtheuvelbaken',
         signDescription: 'Gebod voor alle bestuurders het bord voorbij te gaan aan de zijde die de pijl aangeeft',
         signImage: 'http://wetten.overheid.nl/afbeelding?toestandid=BWBR0004825/2017-07-01_0&naam=27629.png',
@@ -149,12 +170,14 @@ export default {
           { type: 'uit administratie',
             id: 'currentD02',
             features: currentSignsD02Json.features,
-            icon: 'static/images/d02.svg'
+            icon: 'static/images/d02.svg',
+            iconSize: [10, 10]
           },
           { type: 'gedetecteerd',
             id: 'detectedD02',
             features: detectedSignsD02Json.features,
-            icon: 'static/images/d02_ml.svg'
+            icon: 'static/images/d02_ml.svg',
+            iconSize: [7, 7]
           }]
       }]
     }
@@ -180,8 +203,10 @@ export default {
     padding: 0px;
   }
   li {
+    margin: 0px 10px 10px 0px;
     font-family: 'Avenir Medium';
     list-style: none;
+    float:left;
   }
   .map-overlay {
     background-color: #fff;
