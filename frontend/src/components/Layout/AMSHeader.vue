@@ -62,7 +62,7 @@ export default {
     font-size: 9px;
   }
   .title {
-    font-family: 'Avenir Medium';
+    font-family: "Avenir Next LT W01 Demi", arial, sans-serif;
     font-weight: 'bold';
     text-align: right;
     margin-right: 10px;
