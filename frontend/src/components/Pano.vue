@@ -9,7 +9,7 @@
         </tr>
         <tr>
           <td colspan="2">
-            <marzipano :pano_url="locationData.url"></marzipano>
+            <marzipano :pano_url="locationData"></marzipano>
           </td>
         </tr>
       </tbody>
@@ -38,11 +38,9 @@ export default {
 <style lang="scss" scoped>
 h3
  {
-    font-family: "Avenir Next LT W01 Demi", arial, sans-serif;
     font-weight: bold;
  }
  th {
-  font-family: "Avenir Next LT W01 Demi", arial, sans-serif;
   padding-right: 20px;
   padding-bottom: 5px;
   vertical-align: top;

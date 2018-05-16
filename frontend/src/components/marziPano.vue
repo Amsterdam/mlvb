@@ -26,12 +26,27 @@ export default {
     this.panoView(this.viewerOpts, this.pano_url)
   },
   methods: {
-    panoView (viewerOpts, panoUrl) {
+    panoView (viewerOpts, panoUrl, direction) {
       this.viewer = new Viewer(this.$el, viewerOpts)
-      let source = ImageUrlSource.fromString(panoUrl)
+      let source = ImageUrlSource.fromString(panoUrl.url)
       let geometry = new EquirectGeometry([{ width: 2000 }])
       let limiter = RectilinearView.limit.traditional(1024, 100 * Math.PI / 180)
-      let view = new RectilinearView({ yaw: Math.PI + 180 }, limiter)
+      let yawSet = 1
+      switch (panoUrl.direction) {
+        case 1:
+          yawSet = -90
+          break
+        case 2:
+          yawSet = 1
+          break
+        case 3:
+          yawSet = 90
+          break
+        case 4:
+          yawSet = 180
+          break
+      }
+      let view = new RectilinearView({ yaw: (yawSet - 30) * Math.PI / 180, pitch: 12 * Math.PI / 180 }, limiter)
       this.scene = this.viewer.createScene({
         source: source,
         geometry: geometry,
@@ -46,6 +61,9 @@ export default {
     'pano_url' (to, from) {
       // console.log('pano has changed', from, to)
       this.panoView(this.viewerOpts, to)
+    },
+    'direction' (to, from) {
+      console.log('direction has changed', from, to)
     }
   }
 }
