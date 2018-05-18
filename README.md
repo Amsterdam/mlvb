@@ -49,10 +49,11 @@ We also imported all the metadata of the pano images (including coordinates) of 
 
 To download the current traffic signs data into the database:
 
+
+### Docker
 1. Add the objecstore password to your environment:
 ```export OBJECTSTORE_PASSWORD=****```
 
-### Docker
 2. Build and run the docker to start a database:
 ```
 cd current_trafic_signs
@@ -60,14 +61,17 @@ docker-compose build
 docker-compose up
 ```
 
-Run locally:
+### Run locally
+1. Add the objecstore password to your environment:
+```export OBJECTSTORE_PASSWORD=****```
+
 2. Build and run the docker to start a database:
 ```
     cd current_trafic_signs
     docker-compose build database
     docker-compose up database
 ```
-Install the needed packages and run all the import an export scripts locally:
+3. Install the needed packages and run all the import an export scripts locally:
 ```
  cd current_trafic_signs
  virtualenv --python=$(which python3) venv
