@@ -72,7 +72,7 @@ def handle_cli():
         from id TMX7316010203-000301_pano_0000_003409
 
         Example:
-        ` python create_geojson.py --csv locations-detected-2018-05-15.csv --geojson 2018-05-15-detections-vluchtheuvel-bakens.json python create_geojson.py --csv locations-detected-2018-05-15.csv --geojson 2018-05-15-detections-vluchtheuvel-bakens.json`
+        `python create_geojson.py --csv locations-detected-2018-05-15.csv --geojson 2018-05-15-detections-vluchtheuvel-bakens.json`
         """
     )
     parser.add_argument(
