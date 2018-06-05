@@ -53,9 +53,8 @@ import {
 import L from 'leaflet'
 // import store from '../store'
 // import PopupContent from './GeoJson2Popup'
-import currentSignsD02Json from '../data/weesperbuurt_current_traffic_signs_d02.json'
-import detectedSignsD02Json from '../data/2018-05-15-detections-vluchtheuvel-bakens.json'
-import currentSignsD02JsonAmsterdam from '../data/nearest_panos_d02_gele_koker_2018-04-28.json'
+import currentSignsD02Json from '../data/nearest_panos_d02_gele_koker_2018-05-28.json'
+import detectedSignsD02Json from '../data/2018-05-28-detections-vluchtheuvel-bakens-amsterdam.json'
 import firstrunD02Json from '../data/2018-05-11-detections-vluchtheuvel-bakens-panos.json'
 // import { rd, rdToWgs84 } from '../services/geojson'
 import {
@@ -143,7 +142,7 @@ export default {
       //  autoClose: true
       // },
       signs: [{
-        signId: 'D02 eerste run',
+        signId: 'D02 first run',
         signName: 'Vluchtheuvelbaken',
         signDescription: 'Gebod voor alle bestuurders het bord voorbij te gaan aan de zijde die de pijl aangeeft',
         signImage: 'http://wetten.overheid.nl/afbeelding?toestandid=BWBR0004825/2017-07-01_0&naam=27629.png',
@@ -151,7 +150,7 @@ export default {
         data: [
           { type: 'uit administratie',
             id: 'currentD02',
-            features: currentSignsD02JsonAmsterdam.features,
+            features: currentSignsD02Json.features,
             icon: 'static/images/d02.svg',
             iconSize: [10, 10]
           },
@@ -161,7 +160,7 @@ export default {
             icon: 'static/images/d02_ml.svg',
             iconSize: [7, 7]
           }]}, {
-        signId: 'D02 Weesperbuurt',
+        signId: 'D02 second run',
         signName: 'Vluchtheuvelbaken',
         signDescription: 'Gebod voor alle bestuurders het bord voorbij te gaan aan de zijde die de pijl aangeeft',
         signImage: 'http://wetten.overheid.nl/afbeelding?toestandid=BWBR0004825/2017-07-01_0&naam=27629.png',

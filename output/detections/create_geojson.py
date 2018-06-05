@@ -9,30 +9,33 @@ import argparse
 import csv
 import json
 import requests
+import requests_cache
 import os
 
 GEOMETRY_FIELDS = ['geometry', 'coordinates']
-
+# Add cache if api request fails
+requests_cache.install_cache('pano_cache', backend='sqlite', expire_after=300)
 
 def read_csv(filename):
     """
     Process CSV of traffic sign classifications output GeoJSON.
     """
     features = []
-    base_url = 'https://api.data.amsterdam.nl/panorama/recente_opnames/alle/'
+    base_url = 'https://api.data.amsterdam.nl/panorama/recente_opnames/2017/'
 
     with open(filename, 'r') as f:
         reader = csv.DictReader(f, delimiter=',', quotechar='"')
-
         # determine fieldname of geometry:
         geom_fieldname = 'geometry' if 'geometry' in reader.fieldnames else 'coordinates'
-
+        # other set used chunks['x'], chunks['y']
         next(reader) # skip header
         for chunks in reader:
-            # lon, lat = [float(x) for x in chunks[geom_fieldname].split()]
+            lon, lat = [float(x) for x in chunks[geom_fieldname].split()]
             uri = os.path.join(base_url, chunks['pano_id'])
+            print(uri)
             pano_uri = requests.get(uri)
             pano_json = pano_uri.json()
+            print('object received')
             features.append({
                 'id': int(chunks['']),
                 'properties': {
@@ -42,12 +45,10 @@ def read_csv(filename):
                 },
                 'geometry': {
                     'type': 'Point',
-                    'coordinates': [chunks['x'], chunks['y']]
+                    'coordinates': [lon, lat]
                 },
                 'type': 'Feature'
             })
-            print()
-
     return {
         'type': 'FeatureCollection',
         'features': features,
