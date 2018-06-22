@@ -11,9 +11,9 @@
 </template>
 
 <script>
-import card from './Layout/Card'
-import leafletMap from './leafletMap'
-import panoView from './pano.vue'
+import card from '../Layout/Card'
+import leafletMap from '../leafletMap'
+import panoView from '../pano.vue'
 
 export default {
   name: 'mlvb',

@@ -7,7 +7,7 @@
 </template>
 
 <script>
-import GeoSearchBar from '../GeoSearch'
+import GeoSearchBar from '../Geosearch'
 export default {
   components: {GeoSearchBar}
 }
