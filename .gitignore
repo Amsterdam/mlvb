@@ -10,7 +10,6 @@ venv/
 .ipynb_checkpoints
 *.egg-info
 gh-pages/
-/data/
 sql_inserts/
 *.sqlite
 *.json
@@ -22,3 +21,4 @@ sql_inserts/
 .eggs
 dist
 .DS_Store
+/data_old/
