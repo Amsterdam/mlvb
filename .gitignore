@@ -9,7 +9,6 @@ venv/
 .conf
 .ipynb_checkpoints
 *.egg-info
-build/
 gh-pages/
 data/
 sql_inserts/
