@@ -9,7 +9,7 @@ import {
   ImageUrlSource,
   EquirectGeometry,
   RectilinearView
-} from 'marziPano'
+} from 'marzipano'
 
 export default {
   props: ['pano_url'],
