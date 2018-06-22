@@ -25,21 +25,23 @@ The website is build with the use of:
 
 To start the frontend locally on localhost:8080 run:
 ```
-    cd frontend
-	npm run dev
+git clone https://github.com/Amsterdam/mlvb.git
+cd mlvb/frontend
+sudo npm install
+npm run dev
 ```
 
 To build the site:
 ```
-    cd frontend
-    make docs
+cd frontend
+make docs
 ```
 
 To view the site on localhost:8000:
 ```
-    cd..
-    cd docs
-    python3 -m http.server
+ cd..
+ cd docs
+ python3 -m http.server
 ```
 
 ## current_traffic_signs
