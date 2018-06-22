@@ -6,13 +6,6 @@ https://amsterdam.github.io/mlvb
 This project was a first effort to detect traffic signs on our panoramic images we provide as opendata:
 https://api.data.amsterdam.nl/panorama
 
-## offical_dutch_traffic_signs_by_law
-
-The sign numbering is based on the offical traffic sign law:
-http://wetten.overheid.nl/BWBR0004825/2017-07-01
-
-This folder contains alle the offical Dutch traffic signs with descriptions and reference image urls scraped from this site.
-[offical_dutch_traffic_signs_by_law/output](https://github.com/Amsterdam/mlvb/tree/master/offical_dutch_traffic_signs_by_law/output)
 
 ## frontend
 
@@ -94,6 +87,15 @@ The CSV files can be found in the [output folder](https://github.com/Amsterdam/m
 ## output
 
 The [output folder](https://github.com/Amsterdam/mlvb/tree/master/output/pano-traffic-sign-pre-selection) contains the resulting csv/json output of the pano images found with the trained Model containing traffic sign and global N Z W E direction within the image.
+
+## offical_dutch_traffic_signs_by_law
+
+The sign numbering is based on the offical traffic sign law:
+http://wetten.overheid.nl/BWBR0004825/2017-07-01
+
+This folder contains alle the offical Dutch traffic signs with descriptions and reference image urls scraped from this site.
+[offical_dutch_traffic_signs_by_law/output](https://github.com/Amsterdam/mlvb/tree/master/offical_dutch_traffic_signs_by_law/output)
+
 
 
 
