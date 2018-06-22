@@ -21,4 +21,4 @@ sql_inserts/
 *.egg-info
 .eggs
 dist
-
+.DS_Store
