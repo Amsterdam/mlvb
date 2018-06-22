@@ -10,7 +10,7 @@ venv/
 .ipynb_checkpoints
 *.egg-info
 gh-pages/
-data/
+/data/
 sql_inserts/
 *.sqlite
 *.json
