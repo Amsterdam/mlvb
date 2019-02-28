@@ -3,6 +3,7 @@ from datapunt_processing.helpers.connections import psycopg_connection_string
 from datapunt_processing.helpers.files import create_dir_if_not_exists
 from datapunt_processing.helpers.connections import postgres_engine_pandas
 
+import argparse
 import subprocess
 import psycopg2
 from psycopg2 import sql
@@ -61,8 +62,8 @@ def create_pg_schema(cursor, schema_name):
     logger.info('Created schema {}'.format(schema_name))
 
 
-def pg_connection():
-    pg_string = psycopg_connection_string('config.ini', 'dev')
+def pg_connection(config_path, config_name):
+    pg_string = psycopg_connection_string(config_path, config_name)
     connection = psycopg2.connect(pg_string)
     connection.set_isolation_level(psycopg2.extensions.ISOLATION_LEVEL_AUTOCOMMIT)
     cursor = connection.cursor()
@@ -248,15 +249,14 @@ def create_final_table(cursor):
     logger.info('Created table: current_traffic_signs')
 
 
-def import_shapefiles(data_folder, shp_dirs):
-    pg_string = psycopg_connection_string('config.ini', 'dev')
-    cursor = pg_connection()
+def import_shapefiles(cursor, pg_string, data_folder, shp_dirs):
     for shp_dir in shp_dirs:
         create_pg_schema(cursor, shp_dir['schema'])
         full_path = os.path.join(data_folder, shp_dir['path'], "*.shp")
         for shp_filename in glob.glob(full_path):
             logger.info('Found: '+shp_filename+', saving to Postgres')
             shp2psql(shp_filename, pg_string, shp_filename.split('/')[-1][:-4], shp_dir['schema'])
+            cursor.close()
 
 
 def shp2psql(shp_filename, pg_string, layer_name, schema_name):
@@ -269,7 +269,7 @@ def shp2psql(shp_filename, pg_string, layer_name, schema_name):
         stdout=subprocess.PIPE, env={**os.environ, 'PGCLIENTENCODING':'LATIN-1'})  # UTF-8 gives encoding error
 
 
-def load_xls(cursor, datadir, schema_name, config_path, db_config_name):
+def load_xls(cursor, datadir, schema_name, config_path, config_name):
     """Load xlsx into postgres for multiple files"""
     files = os.listdir(datadir)
     files_xls = [f for f in files if f.split('.')[-1] in ('xlsx', 'xls')]
@@ -285,7 +285,7 @@ def load_xls(cursor, datadir, schema_name, config_path, db_config_name):
         logger.info(df.columns)
 
         # load the data into pg
-        engine = postgres_engine_pandas(config_path, db_config_name)
+        engine = postgres_engine_pandas(config_path, config_name)
         table_name = filename.split('.')[0]
         create_pg_schema(cursor, schema_name)
         df.to_sql(table_name, engine, schema=schema_name, if_exists='replace')  # ,dtype={geom: Geometry('POINT', srid='4326')})
@@ -296,9 +296,7 @@ def load_xls(cursor, datadir, schema_name, config_path, db_config_name):
                                sql.Identifier(table_name)),)
 
 
-def save_geojson(table_name, output_folder):
-    pg_string = psycopg_connection_string('config.ini', 'dev')
-    cursor = pg_connection()
+def save_geojson(cursor, pg_string, table_name, output_folder):
     create_dir_if_not_exists(output_folder)
     full_path = os.path.join(output_folder,table_name+'.geojson')
     cmd = [
@@ -311,8 +309,32 @@ def save_geojson(table_name, output_folder):
     logger.info("Writen GeoJSON to: {}".format(full_path))
 
 
+def parser():
+    """Parser function to run arguments from commandline and to add description to sphinx docs."""
+    description = """
+    Use docker or local setup to import files:
+    ``python import_files_to_postgres.py config.ini docker``
+
+    """
+
+    parser = argparse.ArgumentParser(
+                        description=description)
+    parser.add_argument('config_path',
+                        type=str,
+                        help="Full Location of config.ini file")
+    parser.add_argument('config_name',
+                        type=str,
+                        help="Define the running env: 'docker' or 'dev' when running locally")
+    return parser
+
+
 def main():
+    args = parser().parse_args()
+    pg_string = psycopg_connection_string(args.config_path, args.config_name)
+    cursor = pg_connection(args.config_path, args.config_name)
+
     data_folder = '../data/'
+
     mdb_files = [
         {'schema': 'nieuw-west',
          'path': 'beheerassets/nieuw-west/verkeersborden_en_maatregelen_nieuwwest_1jul2014.mdb'},
@@ -325,25 +347,26 @@ def main():
         {'schema': 'zuid',
          'path': 'beheerassets/zuid/vm_zuid_verouderde_gegevens.mdb'},
         ]
+    for mdb_file in mdb_files:
+        mdb_path = os.path.join(data_folder,mdb_file['path'])
+        import_mdb(cursor, mdb_file['schema'], mdb_path)
+
     shp_files = [
         {'schema': 'centrum',
          'path': 'beheerassets/centrum'},
         {'schema': 'amsterdamse_bos',
          'path': 'beheerassets/adam_bos'}
         ]
+    import_shapefiles(cursor, pg_string, data_folder, shp_files)
+
     xls_files = [
         {'schema': 'zuidoost',
          'path': 'beheerassets/zuidoost'}
         ]
+    load_xls(cursor, os.path.join(data_folder, xls_files[0]['path']), xls_files[0]['schema'], args.config_path, args.config_name)
 
-    import_shapefiles(data_folder, shp_files)
-    cursor = pg_connection()
-    load_xls(cursor, os.path.join(data_folder, xls_files[0]['path']), xls_files[0]['schema'], 'config.ini', 'dev')
-    for mdb_file in mdb_files:
-        mdb_path = os.path.join(data_folder,mdb_file['path'])
-        import_mdb(cursor, mdb_file['schema'], mdb_path)
     create_final_table(cursor)
-    save_geojson('current_traffic_signs', '../output')
+    save_geojson(cursor, 'current_traffic_signs', '../output')
 
 
 if __name__ == "__main__":

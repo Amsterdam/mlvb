@@ -93,9 +93,11 @@ def download_containers(config_path, config_name, prefixes, output_folder):
     logger.info('Downloading containers ...')
     prefixes = prefixes.split(',')
     print(containers)
+    print(prefixes)
     for container in containers:
         for prefix in prefixes:
-            download_container(connection, container, prefix, output_folder)
+            if container['name'] == prefix:
+                download_container(connection, container, prefix, output_folder)
 
 
 def parser():
